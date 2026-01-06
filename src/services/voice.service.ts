@@ -2,6 +2,7 @@ import {
   GoogleGenAI
 } from "@google/genai";
 import { config } from '../config/env';
+import { toolsSchemas } from "@/tools/schemas";
 
 export class VoiceService {
   private ai: GoogleGenAI;
@@ -35,6 +36,11 @@ export class VoiceService {
           ],
         },
       ],
+      config: {
+        tools: [{
+          functionDeclarations: toolsSchemas
+        }]
+      }
     });
 
     return response.text || '';
