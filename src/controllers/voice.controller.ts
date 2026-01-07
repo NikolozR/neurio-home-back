@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { voiceService } from '../services/voice.service';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { ApiResponse } from '../types';
 import { toolService } from '../services/tool.service';
 
 export class VoiceController {
   create = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
+    const startTime = Date.now();
     const audioFile = req.file;
 
     if (!audioFile) {
@@ -15,24 +15,25 @@ export class VoiceController {
       });
     }
 
-
     const sessionId = req.body.sessionId || req.headers['x-session-id'] as string || 'default-session';
-    console.log(`Processing audio for session: ${sessionId}`);
+    console.log(`\n🎤 [${sessionId}] Processing audio (${(audioFile.size / 1024).toFixed(2)} KB, ${audioFile.mimetype})`);
 
+    const sttStart = Date.now();
     let LLMResponse = await voiceService.speechToText(audioFile, sessionId);
+    console.log(`⏱️  STT took ${Date.now() - sttStart}ms`);
 
-    console.log(LLMResponse);
     while (LLMResponse.functionCalls && LLMResponse.functionCalls.length > 0) {
       const functionCall = LLMResponse.functionCalls[0];
-      console.log(`Executing tool: ${functionCall.name}`);
+      console.log(`🔧 Executing tool: ${functionCall.name}`);
 
       try {
+        const toolStart = Date.now();
         const result = await toolService.executeTool(functionCall.name || 'unknown_tool', functionCall.args);
+        console.log(`⏱️  Tool execution took ${Date.now() - toolStart}ms`);
 
-        console.log(`Tool executed successfully: ${functionCall.name}`);
-        console.log('Feeding tool response back to LLM...');
-
+        const feedbackStart = Date.now();
         LLMResponse = await voiceService.handleToolResponse(sessionId, functionCall.name || 'unknown_tool', result);
+        console.log(`⏱️  Tool feedback to LLM took ${Date.now() - feedbackStart}ms`);
 
       } catch (error: any) {
         return res.status(500).json({
@@ -43,13 +44,36 @@ export class VoiceController {
       }
     }
 
-    const response: ApiResponse = {
+    // Get text response from LLM
+    const textResponse = LLMResponse.text;
+    
+    if (!textResponse) {
+      return res.status(500).json({
+        success: false,
+        message: 'No response generated from AI',
+      });
+    }
+
+    console.log(`💬 AI Response: "${textResponse.substring(0, 50)}..."`);
+
+    // Convert text to speech
+    const ttsStart = Date.now();
+    const audioBuffer = await voiceService.textToSpeech(textResponse);
+    console.log(`⏱️  TTS took ${Date.now() - ttsStart}ms (${(audioBuffer.length / 1024).toFixed(2)} KB)`);
+    
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ Total processing time: ${totalTime}ms\n`);
+    
+    // Return audio as base64 in JSON
+    return res.status(200).json({
       success: true,
       message: 'Voice processed successfully',
-      data: LLMResponse.text,
-    };
-
-    return res.status(201).json(response);
+      data: {
+        audio: audioBuffer.toString('base64'),
+        text: textResponse,
+        mimeType: 'audio/wav'
+      }
+    });
   });
 }
 

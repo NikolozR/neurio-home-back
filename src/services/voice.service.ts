@@ -27,7 +27,7 @@ export class VoiceService {
           systemInstruction: {
             parts: [
               {
-                text: "Your main target is to gather name, email and phone from user. You have tools that you can call (defined in config), or you can send a message that will be converted to speech for the user."
+                text: "You are a friendly English-speaking assistant. Your goal is to gather the user's name, email, and phone number through natural conversation. Keep responses concise and ask information all at a time. Always respond in a warm, professional tone."
               }
             ],
             role: "system"
@@ -40,6 +40,7 @@ export class VoiceService {
       this.chats.set(sessionId, chat);
     }
 
+
     const response = await chat.sendMessage({
       message: {
         inlineData: {
@@ -50,6 +51,64 @@ export class VoiceService {
     });
 
     return response;
+  }
+
+  async textToSpeech(text: string): Promise<Buffer> {
+    const response = await this.ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text }] }],
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Kore' }
+          }
+        }
+      }
+    });
+
+    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    
+    if (!audioData) {
+      throw new Error('No audio data received from TTS service');
+    }
+
+    const rawPcmData = Buffer.from(audioData, 'base64');
+    
+    // Gemini returns raw PCM, need to add WAV headers
+    // Assuming 24kHz, 16-bit, mono (adjust based on Gemini's actual output)
+    const wavBuffer = this.addWavHeader(rawPcmData, 24000, 1, 16);
+    
+    return wavBuffer;
+  }
+
+  private addWavHeader(pcmData: Buffer, sampleRate: number, numChannels: number, bitsPerSample: number): Buffer {
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = pcmData.length;
+    
+    const header = Buffer.alloc(44);
+    
+    // "RIFF" chunk descriptor
+    header.write('RIFF', 0);
+    header.writeUInt32LE(36 + dataSize, 4); // File size - 8
+    header.write('WAVE', 8);
+    
+    // "fmt " sub-chunk
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16); // Subchunk1Size (16 for PCM)
+    header.writeUInt16LE(1, 20); // AudioFormat (1 for PCM)
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(byteRate, 28);
+    header.writeUInt16LE(blockAlign, 32);
+    header.writeUInt16LE(bitsPerSample, 34);
+    
+    // "data" sub-chunk
+    header.write('data', 36);
+    header.writeUInt32LE(dataSize, 40);
+    
+    return Buffer.concat([header, pcmData]);
   }
 
   async handleToolResponse(sessionId: string, toolName: string, toolResult: any): Promise<GenerateContentResponse> {
@@ -70,6 +129,10 @@ export class VoiceService {
     });
 
     return response;
+  }
+
+  clearSession(sessionId: string): void {
+    this.chats.delete(sessionId);
   }
 }
 
