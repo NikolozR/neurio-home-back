@@ -1,10 +1,12 @@
 import {
-  GoogleGenAI
+  GoogleGenAI,
+  GenerateContentResponse
 } from "@google/genai";
 import { config } from '../config/env';
 import { toolsSchemas } from "@/tools/schemas";
 
 export class VoiceService {
+  private chats = new Map<string, any>();
   private ai: GoogleGenAI;
 
   constructor() {
@@ -13,38 +15,63 @@ export class VoiceService {
     });
   }
 
-  async speechToText(audioFile: Express.Multer.File): Promise<string> {
+  async speechToText(audioFile: Express.Multer.File, sessionId: string = 'default-session'): Promise<GenerateContentResponse> {
     const { buffer, mimetype } = audioFile;
 
-    const prompt = "Transcribe this audio file exactly as spoken. Return only the raw text.";
+    let chat = this.chats.get(sessionId);
 
-    const response = await this.ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              inlineData: {
-                data: buffer.toString('base64'),
-                mimeType: mimetype,
-              },
-            },
-            {
-              text: prompt,
-            },
-          ],
+    if (!chat) {
+      chat = this.ai.chats.create({
+        model: "gemini-2.5-flash",
+        config: {
+          systemInstruction: {
+            parts: [
+              {
+                text: "Your main target is to gather name, email and phone from user. You have tools that you can call (defined in config), or you can send a message that will be converted to speech for the user."
+              }
+            ],
+            role: "system"
+          },
+          tools: [{
+            functionDeclarations: toolsSchemas
+          }]
+        }
+      });
+      this.chats.set(sessionId, chat);
+    }
+
+    const response = await chat.sendMessage({
+      message: {
+        inlineData: {
+          data: buffer.toString('base64'),
+          mimeType: mimetype,
         },
-      ],
-      config: {
-        tools: [{
-          functionDeclarations: toolsSchemas
-        }]
       }
     });
 
-    return response.text || '';
+    return response;
+  }
+
+  async handleToolResponse(sessionId: string, toolName: string, toolResult: any): Promise<GenerateContentResponse> {
+    const chat = this.chats.get(sessionId);
+    if (!chat) {
+      throw new Error('Session not found');
+    }
+
+    const response = await chat.sendMessage({
+      message: {
+        functionResponse: {
+          name: toolName,
+          response: {
+            result: toolResult
+          }
+        }
+      }
+    });
+
+    return response;
   }
 }
+
 
 export const voiceService = new VoiceService();
