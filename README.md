@@ -1,184 +1,112 @@
-# Neurio Home Backend
+# Neurio Home Backend 🚀
 
-A clean, production-ready Node.js + Express backend template built with TypeScript and MongoDB (Mongoose). Features a well-structured architecture with separation of concerns, centralized error handling, and comprehensive development tooling.
+A Node.js backend built with TypeScript, Express, and MongoDB, powering AI-driven voice interactions.
 
-## 🚀 Features
+## 🛠️ Tech Stack
 
-- **TypeScript** - Type-safe development with strict configuration
-- **Express.js** - Fast, minimalist web framework
-- **MongoDB & Mongoose** - NoSQL database with elegant ODM
-- **Clean Architecture** - Controllers, Services, Models separation
-- **Error Handling** - Centralized error handling with custom error classes
-- **Validation** - Request validation middleware
-- **Security** - Helmet and CORS protection
-- **Development Tools** - ESLint, Prettier, Nodemon
-- **Environment Config** - Type-safe environment variable management
+- **Runtime**: Node.js (v20+)
+- **Language**: TypeScript
+- **Framework**: Express.js
+- **Database**: MongoDB
+- **AI Services**: Google Gemini (STT & LLM), OpenAI (TTS)
+- **Deployment**: Render.com & MongoDB Atlas
 
-## 📁 Project Structure
+---
 
-```
-neurio-home-back/
-├── src/
-│   ├── config/           # Configuration files
-│   │   ├── env.ts        # Environment variables
-│   │   └── database.ts   # MongoDB connection
-│   ├── controllers/      # Request handlers
-│   │   └── user.controller.ts
-│   ├── models/           # Mongoose models
-│   │   └── User.model.ts
-│   ├── services/         # Business logic
-│   │   └── user.service.ts
-│   ├── routes/           # API routes
-│   │   ├── index.ts
-│   │   └── user.routes.ts
-│   ├── middleware/       # Custom middleware
-│   │   ├── errorHandler.ts
-│   │   ├── asyncHandler.ts
-│   │   └── validation.ts
-│   ├── types/            # TypeScript types
-│   │   └── index.ts
-│   ├── app.ts            # Express app setup
-│   └── index.ts          # Application entry point
-├── dist/                 # Compiled JavaScript (generated)
-├── .env.example          # Environment variables template
-├── .gitignore
-├── package.json
-├── tsconfig.json
-├── .eslintrc.json
-├── .prettierrc
-└── nodemon.json
+## 💻 Local Setup
+
+Follow these steps to get the project running on your local machine.
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/NikolozR/neurio-home-back.git
+cd neurio-home-back
 ```
 
-## 🛠️ Installation
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-1. **Clone or use this template**
+### 3. Environment Configuration
+Create a `.env` file in the root directory and fill in the following values (refer to `.env.example`):
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```env
+# Server
+PORT=4000
+NODE_ENV=development
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` with your configuration:
-   ```env
-   NODE_ENV=development
-   PORT=3000
-   MONGODB_URI=mongodb://localhost:27017/neurio-home
-   CORS_ORIGIN=http://localhost:3000
-   API_VERSION=v1
-   ```
+# Database
+MONGODB_URI=your_mongodb_connection_string
 
-4. **Ensure MongoDB is running**
-   - Local: `mongod`
-   - Or use MongoDB Atlas cloud database
+# AI API Keys
+GEMINI_API_KEY=your_google_gemini_key
+OPENAI_API_KEY=your_openai_key
 
-## 🚀 Usage
+# API Configuration
+CORS_ORIGIN=*
+API_VERSION=v1
+```
 
-### Development
+### 4. Run the Project
+
+**Development Mode (with auto-reload):**
 ```bash
 npm run dev
 ```
-Starts the development server with hot-reload on `http://localhost:3000`
 
-### Build
+**Production Build:**
 ```bash
 npm run build
-```
-Compiles TypeScript to JavaScript in the `dist/` directory
-
-### Production
-```bash
 npm start
 ```
-Runs the compiled JavaScript from `dist/`
 
-### Linting
-```bash
-npm run lint        # Check for linting errors
-npm run lint:fix    # Fix linting errors
-```
-
-### Formatting
-```bash
-npm run format        # Format code with Prettier
-npm run format:check  # Check formatting
-```
+---
 
 ## 📡 API Endpoints
 
-### Health Check
-- `GET /` - Welcome message
-- `GET /api/v1/health` - Health check endpoint
+### Voice Processing
+- `POST /api/v1/voice`: Uploads an audio file, processes it through Gemini, and returns AI response data.
 
-### Users
-- `GET /api/v1/users` - Get all users
-- `GET /api/v1/users/:id` - Get user by ID
-- `POST /api/v1/users` - Create new user
-- `PUT /api/v1/users/:id` - Update user
-- `DELETE /api/v1/users/:id` - Delete user
+### User Management
+- `GET /api/v1/users`: List all users.
+- `GET /api/v1/users/email/:email`: Find user by email.
+- `DELETE /api/v1/users/:id`: Remove a user.
 
-### Example Request
-```bash
-# Create a user
-curl -X POST http://localhost:3000/api/v1/users \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John Doe", "email": "john@example.com", "age": 30}'
-```
+---
 
-## 🏗️ Architecture
+## ⚙️ How It Works
 
-### Controllers
-Handle HTTP requests and responses. Keep them thin - delegate business logic to services.
+The core of the system is the **Voice Processing Pipeline**, which handles the transition from user speech to AI action and back to speech.
 
-### Services
-Contain business logic and interact with models. This is where the core functionality lives.
+### 1. The Voice Pipeline (`POST /api/v1/voice`)
+When an audio file is uploaded:
+1. **STT & Intent Recognition**: The audio is sent to **Google Gemini**. Gemini performs Speech-to-Text and simultaneously analyzes the intent of the user.
+2. **Autonomous Tool Execution**: If Gemini decides it needs to perform an action (like "save user details"), it triggers a **Function Call**. 
+   - The backend catches this, executes the corresponding local logic (e.g., interacting with **MongoDB**), and sends the result back to Gemini.
+3. **Reasoning**: Gemini receives the tool result, "thinks," and generates a final natural language response.
+4. **TTS (Text-to-Speech)**: The final text is sent to **OpenAI TTS**, which generates a high-quality voice response.
+5. **Response**: The client receives both the text and the audio (as base64) in a single JSON response.
 
-### Models
-Define data structure and validation using Mongoose schemas.
+### 2. Session Management
+The system uses a `sessionId` (passed in headers or body) to maintain conversation context. This allows Gemini to "remember" previous parts of the conversation, making the interaction feel natural rather than like isolated commands.
 
-### Middleware
-- **errorHandler** - Centralized error handling
-- **asyncHandler** - Wraps async functions to catch errors
-- **validation** - Request validation
+### 3. Tool System
+The backend defines strict JSON schemas for "Tools". These are shared with Gemini so it knows exactly what functions it can call (e.g., `save_user_data`) and what arguments they require.
 
-## 🔒 Environment Variables
+---
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment mode | `development` |
-| `PORT` | Server port | `3000` |
-| `MONGODB_URI` | MongoDB connection string | Required |
-| `CORS_ORIGIN` | Allowed CORS origin | `*` |
-| `API_VERSION` | API version prefix | `v1` |
+## 🧠 Design Decisions & Journey
 
-## 🧪 Testing
+This project was developed during a particularly intense period—the **Christmas holidays combined with university finals**. Because of this, my primary goal at the start was to build a **functional, stable, and simple foundation** using a classic **REST API** architecture.
 
-Add your testing framework of choice (Jest, Mocha, etc.) and create tests in a `tests/` or `__tests__/` directory.
+### REST vs. WebSockets
+As the development progressed, I realized the potential for **real-time streaming** communication. Integrating WebSockets would allow for faster, lower-latency interactions between the LLM and the user, especially for voice-based experiences where every millisecond counts.
 
-## 📝 Development Guidelines
+### The Final Choice
+Despite the realization that a streaming/WebSocket approach would be "better" and "faster" for a production-scale voice assistant:
+1. **Stability First**: I chose to stick with the current **REST-based implementation** to ensure reliability within the limited time I had during my exams.
+2. **Predictability**: The REST approach provided a more predictable debugging environment while working with complex AI integrations (Gemini + OpenAI).
+3. **Future Scalability**: The current architecture is decoupled enough that migrating to WebSockets or adding streaming support is a clear next step for the next version.
 
-1. **Follow the established patterns** - Controllers → Services → Models
-2. **Use TypeScript types** - Leverage type safety
-3. **Handle errors properly** - Use `AppError` for operational errors
-4. **Validate inputs** - Use validation middleware
-5. **Keep it clean** - Run linter and formatter before committing
-
-## 🤝 Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Run linter and formatter
-4. Test your changes
-5. Submit a pull request
-
-## 📄 License
-
-ISC
-
-## 🙏 Acknowledgments
-
-Built with modern best practices for Node.js backend development.
+---
