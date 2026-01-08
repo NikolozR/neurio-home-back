@@ -28,7 +28,7 @@ export class VoiceController {
 
       try {
         const toolStart = Date.now();
-        const result = await toolService.executeTool(functionCall.name || 'unknown_tool', functionCall.args);
+        const result = await toolService.executeTool(functionCall.name || 'unknown_tool', functionCall.args || {});
         console.log(`⏱️  Tool execution took ${Date.now() - toolStart}ms`);
 
         const feedbackStart = Date.now();

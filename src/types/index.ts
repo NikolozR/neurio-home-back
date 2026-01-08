@@ -1,11 +1,4 @@
-export interface IUser {
-  name: string;
-  email: string;
-  age?: number;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
+// API Response types
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -19,3 +12,16 @@ export interface ErrorResponse {
   message: string;
   stack?: string;
 }
+
+// Conversation types
+export type {
+  ConversationPart,
+  ConversationHistory,
+  AudioFile
+} from './conversation.types';
+
+// Gemini types
+export type {
+  GeminiChat,
+  ChatConfig
+} from './gemini.types';

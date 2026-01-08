@@ -12,9 +12,19 @@ export class UserService {
     return user;
   }
 
-  // This is for updating user that already exists
+  // This is for updating user by ID
   async updateUser(id: string, data: { name?: string; email?: string; phone?: string }): Promise<IUser | null> {
     return User.findByIdAndUpdate(id, data, { new: true });
+  }
+
+  // This is for updating user by email
+  async updateUserByEmail(email: string, data: { name?: string; phone?: string }): Promise<IUser | null> {
+    return User.findOneAndUpdate({ email }, data, { new: true });
+  }
+
+  // This is for updating user by phone
+  async updateUserByPhone(phone: string, data: { name?: string; email?: string }): Promise<IUser | null> {
+    return User.findOneAndUpdate({ phone }, data, { new: true });
   }
 
   // This is for creating user with partial data - email or phone (we don't do creation with only name because it is not necessarily unique)
@@ -42,6 +52,12 @@ export class UserService {
     return await User.create(data);
   }
 
+  // This is for getting user by name
+  async getUserByName(name: string): Promise<IUser[]> {
+    // Returns array because multiple users can have the same name
+    return User.find({ name: new RegExp(name, 'i') }); // Case-insensitive search
+  }
+
   // This is for getting user by email
   async getUserByEmail(email: string): Promise<IUser | null> {
     return User.findOne({ email });
@@ -57,9 +73,19 @@ export class UserService {
     return User.find();
   }
 
-  // This is for deleting user
+  // This is for deleting user by ID
   async deleteUser(id: string): Promise<IUser | null> {
     return User.findByIdAndDelete(id);
+  }
+
+  // This is for deleting user by email
+  async deleteUserByEmail(email: string): Promise<IUser | null> {
+    return User.findOneAndDelete({ email });
+  }
+
+  // This is for deleting user by phone
+  async deleteUserByPhone(phone: string): Promise<IUser | null> {
+    return User.findOneAndDelete({ phone });
   }
 
 }

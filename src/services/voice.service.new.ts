@@ -16,7 +16,7 @@ export class VoiceService {
   ): Promise<GenerateContentResponse> {
     const { buffer, mimetype } = audioFile;
     return geminiService.speechToText(buffer, mimetype, sessionId);
-    }
+  }
 
   /**
    * Convert text to speech
@@ -31,7 +31,7 @@ export class VoiceService {
   async handleToolResponse(
     sessionId: string,
     toolName: string,
-    toolResult: unknown
+    toolResult: Record<string, unknown>
   ): Promise<GenerateContentResponse> {
     return geminiService.handleToolResponse(sessionId, toolName, toolResult);
   }

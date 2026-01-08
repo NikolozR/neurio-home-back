@@ -9,6 +9,7 @@ interface EnvConfig {
   corsOrigin: string;
   apiVersion: string;
   geminiApiKey: string;
+  openaiApiKey: string;
 }
 
 const getEnvVariable = (key: string, defaultValue?: string): string => {
@@ -26,4 +27,5 @@ export const config: EnvConfig = {
   corsOrigin: getEnvVariable('CORS_ORIGIN', '*'),
   apiVersion: getEnvVariable('API_VERSION', 'v1'),
   geminiApiKey: getEnvVariable('GEMINI_API_KEY'),
+  openaiApiKey: getEnvVariable('OPENAI_API_KEY'),
 };

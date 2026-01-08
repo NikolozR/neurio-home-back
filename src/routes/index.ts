@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import voiceRoutes from './voice.routes';
+import userRoutes from './user.routes';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.get('/health', (_req: Request, res: Response) => {
 });
 
 router.use('/voice', voiceRoutes);
+router.use('/users', userRoutes);
 
 router.use('*', (_req: Request, res: Response) => {
   res.status(404).json({
